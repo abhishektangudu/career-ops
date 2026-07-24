@@ -37,11 +37,11 @@ Copy from `templates/portals.example.yml` and customize:
 ## CV Template (templates/cv-template.html)
 
 The HTML template uses these design tokens:
-- **Fonts**: Space Grotesk (headings) + DM Sans (body) -- self-hosted in `fonts/`
+- **Fonts**: static system sans stack `'Liberation Sans', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif` for headings and body. Do NOT add `@font-face` or self-hosted webfonts — variable woff2 fonts (e.g. Space Grotesk / DM Sans) corrupt PDF text extraction, injecting spurious spaces inside words.
 - **Colors**: Cyan primary (`hsl(187,74%,32%)`) + Purple accent (`hsl(270,70%,45%)`)
 - **Layout**: Single-column, ATS-optimized
 
-To customize fonts/colors, edit the CSS in the template. Update font files in `fonts/` if switching fonts.
+To customize colors, edit the CSS in the template. Keep fonts on the static system stack for clean ATS text extraction.
 
 ## Negotiation Scripts (modes/_shared.md)
 

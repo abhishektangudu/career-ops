@@ -429,12 +429,12 @@
   }
 
   /* === CJK (Japanese) font fallback === */
-  /* The bundled webfonts are Latin-only (see #951). Without a CJK fallback,
-     Japanese text renders as tofu (□) in headless Chromium on any system
-     without a CJK system font (Linux/CI, minimal containers). The Latin brand
-     fonts are kept first so ASCII still uses Space Grotesk / DM Sans, then the
-     browser's per-glyph fallback picks the first installed CJK face for kana
-     and kanji. Mirrors the lang="ar" precedent above. */
+  /* Without a CJK fallback, Japanese text renders as tofu (□) in headless
+     Chromium on any system without a CJK system font (Linux/CI, minimal
+     containers). The Latin system stack is kept first so ASCII stays on
+     Liberation Sans (clean extraction), then the browser's per-glyph fallback
+     picks the first installed CJK face for kana and kanji. Mirrors the
+     lang="ar" precedent above. */
   html[lang="ja"] body {
     font-family: 'Liberation Sans', 'Helvetica Neue', Arial, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN',
       'Yu Gothic', 'YuGothic', 'Noto Sans CJK JP', 'Noto Sans JP',

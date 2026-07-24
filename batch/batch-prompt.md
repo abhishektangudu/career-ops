@@ -388,8 +388,7 @@ ATS rules:
 
 Design rules:
 
-- Space Grotesk for headings, DM Sans for body.
-- Self-hosted fonts from `fonts/`.
+- Use the font stack already defined in `templates/cv-template.html`: the static system sans stack `'Liberation Sans', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif`. Do NOT add `@font-face` rules or self-hosted webfonts (Space Grotesk / DM Sans) — their variable-font glyph advances make PDF text extractors inject spurious spaces inside words ("SUM M ARY"), which breaks ATS parsing.
 - White background, 0.6in margins.
 - Keep the output readable and ATS-safe.
 
