@@ -177,6 +177,7 @@ const scripts = [
   // routing, eval-args regression, scrape-jd parse/error paths).
   { name: 'server.test.mjs', expectExit: 0 },
   { name: 'gemini-eval.test.mjs', expectExit: 0 },
+  { name: 'generate-tailored-cv.test.mjs', expectExit: 0 },
   { name: 'scrape-jd.test.mjs', expectExit: 0 },
   { name: 'runtime-settings.test.mjs', expectExit: 0 },
   { name: 'verify-google-access.test.mjs', expectExit: 0 },
@@ -6419,6 +6420,134 @@ try {
   }
 } catch (e) {
   fail(`ATS ligature suppression test crashed: ${e.message}`);
+}
+
+// ── 27b. ATS-SAFE SYSTEM FONTS (no self-hosted webfonts) ────────
+
+console.log('\n27b. ATS-safe system fonts (clean PDF text extraction)');
+
+try {
+  // The bundled variable woff2 fonts (Space Grotesk / DM Sans) render with
+  // glyph advances that make PDF text extractors inject spurious spaces inside
+  // words (e.g. "SUM M ARY", "P ROFESSIONAL"), which both corrupts ATS keyword
+  // parsing and looks broken on screen. Both CV templates must use a static
+  // system sans stack instead. This guard prevents the resume-template.html
+  // regression where the fix was applied to cv-template.html only.
+  // Return the declaration block of the top-level CSS rule whose selector is
+  // EXACTLY `body` (case-insensitive), i.e. the unconditional default. Walks
+  // top-level rules and skips whole blocks whose selector is not `body`, so
+  // descendant selectors (`html[lang="ja"] body`) and rules nested inside
+  // at-rules (`@media print { body {...} }`) never masquerade as the base body.
+  // Selector-exact + at-rule-aware, so it is independent of source order.
+  const topLevelBodyDeclarations = (css) => {
+    let i = 0;
+    while (i < css.length) {
+      const open = css.indexOf('{', i);
+      if (open === -1) break;
+      const selector = css.slice(i, open).trim();
+      // Find the matching close brace for this block (handles nesting).
+      let depth = 1;
+      let j = open + 1;
+      for (; j < css.length && depth > 0; j++) {
+        if (css[j] === '{') depth++;
+        else if (css[j] === '}') depth--;
+      }
+      if (/^body$/i.test(selector)) return css.slice(open + 1, j - 1);
+      i = j;
+    }
+    return null;
+  };
+  const LIBERATION_BASE = /font-family:\s*'Liberation Sans'/i;
+
+  const ATS_FONT_TEMPLATES = ['cv-template.html', 'resume-template.html'];
+  for (const name of ATS_FONT_TEMPLATES) {
+    const css = readFileSync(join(ROOT, 'templates', name), 'utf-8');
+    // Strip comments so the assertions describe ACTIVE CSS only — the
+    // explanatory notes in these templates mention @font-face / Space Grotesk /
+    // DM Sans / Liberation Sans by name, and must not trip the guards.
+    const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    // No active @font-face rule loading a self-hosted webfont. CSS at-rules are
+    // case-insensitive, so match case-insensitively.
+    if (/@font-face\s*\{/i.test(cssNoComments)) {
+      fail(`${name} still declares @font-face (self-hosted webfonts corrupt PDF text extraction)`);
+    } else {
+      pass(`${name} declares no self-hosted @font-face`);
+    }
+    // No remote webfont pulled in via @import or a <link rel="stylesheet">
+    // (e.g. Google Fonts) — those reintroduce variable webfonts by another door.
+    if (/@import\b/i.test(cssNoComments) || /<link\b[^>]*rel\s*=\s*["']?stylesheet/i.test(cssNoComments)) {
+      fail(`${name} pulls in a remote stylesheet/webfont via @import or <link> (bypasses the system-font guard)`);
+    } else {
+      pass(`${name} pulls in no remote stylesheet/webfont`);
+    }
+    // No font resource referenced by url() (woff/woff2/ttf/otf/eot), whether in
+    // an @font-face, src:, or shorthand — the only permitted fonts are system fonts.
+    if (/url\(\s*['"]?[^)]*\.(?:woff2?|ttf|otf|eot)\b/i.test(cssNoComments)) {
+      fail(`${name} references a self-hosted font resource via url() (self-hosted webfonts corrupt PDF text extraction)`);
+    } else {
+      pass(`${name} references no self-hosted font resource via url()`);
+    }
+    // The BASE body stack (the unconditional top-level `body { ... }` rule) must
+    // lead with the static system sans family. Scoping to the base block stops a
+    // lang="ja"/lang="ar" override from masking an unsafe default body font.
+    const baseBodyBlock = topLevelBodyDeclarations(cssNoComments);
+    if (baseBodyBlock === null) {
+      fail(`${name} has no unconditional top-level 'body { }' rule to validate`);
+    } else if (LIBERATION_BASE.test(baseBodyBlock)) {
+      pass(`${name} base body uses the ATS-safe 'Liberation Sans' system stack`);
+    } else {
+      fail(`${name} base body does not lead with 'Liberation Sans' — PDF text may extract with broken word spacing`);
+    }
+    // No active font-family rule should still reference the removed webfonts.
+    if (/font-family:[^;]*(Space Grotesk|DM Sans)/i.test(cssNoComments)) {
+      fail(`${name} still references Space Grotesk / DM Sans in an active font-family rule`);
+    } else {
+      pass(`${name} has no active Space Grotesk / DM Sans font-family rule`);
+    }
+  }
+
+  // Fixture assertions — prove the base-body guard is selector-exact and
+  // source-order independent (regression: the earlier /[^-\w]body\{/ regex also
+  // matched `html[lang="ja"] body`, so a ja override could mask an unsafe base).
+  const SAFE_FF = "font-family: 'Liberation Sans', 'Helvetica Neue', Arial, sans-serif;";
+  const UNSAFE_FF = "font-family: 'Acme Variable', sans-serif;";
+  const JA_SAFE = `html[lang="ja"] body { ${SAFE_FF} }`;
+  const fixtures = [
+    { label: 'safe base body passes', css: `body { ${SAFE_FF} }`, expectSafe: true },
+    { label: 'unsafe base body + safe ja override fails', css: `body { ${UNSAFE_FF} } ${JA_SAFE}`, expectSafe: false },
+    { label: 'safe ja override first + unsafe base still fails', css: `${JA_SAFE} body { ${UNSAFE_FF} }`, expectSafe: false },
+  ];
+  for (const { label, css, expectSafe } of fixtures) {
+    const block = topLevelBodyDeclarations(css);
+    const isSafe = block !== null && LIBERATION_BASE.test(block);
+    if (isSafe === expectSafe) {
+      pass(`base-body guard fixture: ${label}`);
+    } else {
+      fail(`base-body guard fixture failed: ${label} (got isSafe=${isSafe})`);
+    }
+  }
+
+  // Prompt-regression guard — the active generation instructions must keep
+  // pointing workers at the system stack and must NOT re-introduce a positive
+  // directive to use self-hosted Space Grotesk / DM Sans (the original High
+  // finding: templates were fixed but prompts could send workers back).
+  const POSITIVE_WEBFONT_DIRECTIVE = /(Space Grotesk|DM Sans)\s*(\(|for )\s*(headings|body)|self-hosted fonts from/i;
+  const ATS_PROMPT_FILES = ['batch/batch-prompt.md', 'modes/pdf.md'];
+  for (const rel of ATS_PROMPT_FILES) {
+    const text = readFileSync(join(ROOT, rel), 'utf-8');
+    if (/Liberation Sans/i.test(text)) {
+      pass(`${rel} instructs the ATS-safe 'Liberation Sans' system stack`);
+    } else {
+      fail(`${rel} no longer instructs the 'Liberation Sans' system stack`);
+    }
+    if (POSITIVE_WEBFONT_DIRECTIVE.test(text)) {
+      fail(`${rel} still directs workers to use self-hosted Space Grotesk / DM Sans webfonts`);
+    } else {
+      pass(`${rel} gives no positive directive to use self-hosted Space Grotesk / DM Sans`);
+    }
+  }
+} catch (e) {
+  fail(`ATS-safe system font test crashed: ${e.message}`);
 }
 
 // ── 28. OPTIONAL PROFILE PHOTO (opt-in, DACH/European — #264) ────

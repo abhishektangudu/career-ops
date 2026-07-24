@@ -50,11 +50,10 @@
 
 ## PDF Design
 
-- **Fonts**: Space Grotesk (headings, 600-700) + DM Sans (body, 400-500)
-- **Fonts self-hosted**: `fonts/`
-- **Header**: name in Space Grotesk 24px bold + gradient line `linear-gradient(to right, hsl(187,74%,32%), hsl(270,70%,45%))` 2px + contact row
-- **Section headers**: Space Grotesk 13px, uppercase, letter-spacing 0.05em, color cyan primary
-- **Body**: DM Sans 11px, line-height 1.5
+- **Fonts**: static system sans stack `'Liberation Sans', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif` for BOTH headings and body. Do NOT add `@font-face` or self-hosted webfonts (Space Grotesk / DM Sans variable woff2 corrupt PDF text extraction — extractors inject spurious spaces inside words, e.g. "SUM M ARY"). Weight is set with `font-weight`, not a separate font family.
+- **Header**: name 24px bold + gradient line `linear-gradient(to right, hsl(187,74%,32%), hsl(270,70%,45%))` 2px + contact row
+- **Section headers**: 13px, uppercase, letter-spacing 0.05em, color cyan primary
+- **Body**: 11px, line-height 1.5
 - **Company names**: accent purple color `hsl(270,70%,45%)`
 - **Margins**: 0.6in
 - **Background**: pure white

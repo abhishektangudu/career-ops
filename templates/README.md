@@ -16,7 +16,7 @@ System-layer template files used by career-ops scripts and modes. These files ar
 
 The HTML template rendered by Playwright into PDF. Uses placeholder tokens (`{{NAME}}`, `{{SUMMARY_TEXT}}`, `{{EXPERIENCE}}`, etc.) that the PDF pipeline fills at generation time.
 
-**Design:** Space Grotesk headings + DM Sans body, single-column ATS-safe layout, self-hosted fonts from `fonts/`.
+**Design:** static system sans stack (`'Liberation Sans', 'Helvetica Neue', Arial, 'DejaVu Sans', sans-serif`) for headings and body, single-column ATS-safe layout. Do NOT add `@font-face` or self-hosted webfonts — variable woff2 fonts corrupt PDF text extraction (extractors inject spurious spaces inside words).
 
 **Customization:** Edit this file to change colors, spacing, or section order. The placeholder tokens are documented in `batch/batch-prompt.md` under "Template placeholders."
 
